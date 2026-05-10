@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { BookOpen, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,8 @@ import {
   updateExercise,
   type ExerciseInput,
 } from "@/lib/workouts/actions";
-import type { Exercise } from "@/types/database";
+import { addExerciseFromLibrary } from "@/lib/exercise-library/actions";
+import type { Exercise, ExerciseLibraryItem } from "@/types/database";
 import type { Locale } from "@/lib/i18n/config";
 
 interface Props {
@@ -21,10 +22,18 @@ interface Props {
   clientId: string;
   locale: Locale;
   exercises: Exercise[];
+  library: ExerciseLibraryItem[];
 }
 
-export function DayExercises({ dayId, clientId, locale, exercises }: Props) {
+export function DayExercises({
+  dayId,
+  clientId,
+  locale,
+  exercises,
+  library,
+}: Props) {
   const [adding, setAdding] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   return (
     <div className="space-y-3">
@@ -52,16 +61,137 @@ export function DayExercises({ dayId, clientId, locale, exercises }: Props) {
           dayId={dayId}
           onClose={() => setAdding(false)}
         />
+      ) : picking ? (
+        <LibraryPicker
+          clientId={clientId}
+          dayId={dayId}
+          locale={locale}
+          library={library}
+          onClose={() => setPicking(false)}
+        />
       ) : (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-card/60 px-3 py-2 text-sm text-muted-foreground hover:bg-card hover:text-foreground"
+          >
+            <Plus className="h-4 w-4" />
+            {locale === "ar" ? "إضافة تمرين" : "Add exercise"}
+          </button>
+          <button
+            type="button"
+            disabled={library.length === 0}
+            onClick={() => setPicking(true)}
+            className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <BookOpen className="h-4 w-4" />
+            {locale === "ar" ? "إضافة من المكتبة" : "Add from library"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LibraryPicker({
+  clientId,
+  dayId,
+  locale,
+  library,
+  onClose,
+}: {
+  clientId: string;
+  dayId: string;
+  locale: Locale;
+  library: ExerciseLibraryItem[];
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? library.filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          (i.name_ar?.toLowerCase().includes(q) ?? false),
+      )
+    : library;
+
+  return (
+    <div className="space-y-3 rounded-md border border-border/60 bg-card/80 p-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">
+          {locale === "ar" ? "اختار تمرين من المكتبة" : "Pick from the library"}
+        </p>
         <button
           type="button"
-          onClick={() => setAdding(true)}
-          className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-card/60 px-3 py-2 text-sm text-muted-foreground hover:bg-card hover:text-foreground"
+          onClick={onClose}
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Close"
         >
-          <Plus className="h-4 w-4" />
-          {locale === "ar" ? "إضافة تمرين" : "Add exercise"}
+          <X className="h-4 w-4" />
         </button>
-      )}
+      </div>
+      <Input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={locale === "ar" ? "بحث…" : "Search…"}
+      />
+      <div className="max-h-60 overflow-auto rounded border border-border/40">
+        {filtered.length === 0 ? (
+          <p className="px-3 py-4 text-sm text-muted-foreground">
+            {locale === "ar" ? "مفيش نتايج." : "No matches."}
+          </p>
+        ) : (
+          <ul className="divide-y divide-border/40">
+            {filtered.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-center justify-between gap-2 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{item.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {item.muscle_group} · {item.default_sets}×
+                    {item.default_reps} · {item.default_rest_seconds}s
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => {
+                    setError(null);
+                    startTransition(async () => {
+                      const result = await addExerciseFromLibrary({
+                        day_id: dayId,
+                        client_id: clientId,
+                        library_id: item.id,
+                      });
+                      if (!result.ok) {
+                        setError(result.error ?? "Add failed.");
+                        return;
+                      }
+                      router.refresh();
+                    });
+                  }}
+                >
+                  {locale === "ar" ? "إضافة" : "Add"}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {error ? (
+        <p className="text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

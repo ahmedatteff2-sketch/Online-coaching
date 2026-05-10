@@ -52,6 +52,7 @@ the SQL editor in the Supabase dashboard:
 4. `0004_seed_site_content.sql` — default landing-page CMS content
 5. `0005_progress_photos_storage.sql` — private photos bucket + policies
 6. `0006_workout_plan_coach_notes.sql` — plan-level coach notes columns
+7. `0007_exercise_library.sql` — global reusable exercise library + seed data
 
 ### 4. Create your admin user
 

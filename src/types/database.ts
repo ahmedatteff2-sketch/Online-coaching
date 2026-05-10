@@ -101,6 +101,34 @@ export interface Exercise {
   created_at: string;
 }
 
+export type MuscleGroup =
+  | "chest"
+  | "back"
+  | "shoulders"
+  | "arms"
+  | "legs"
+  | "glutes"
+  | "core"
+  | "cardio"
+  | "full_body"
+  | "other";
+
+export interface ExerciseLibraryItem {
+  id: string;
+  name: string;
+  name_ar: string | null;
+  muscle_group: MuscleGroup;
+  default_sets: number;
+  default_reps: string;
+  default_rest_seconds: number;
+  default_notes: string | null;
+  video_url: string | null;
+  image_url: string | null;
+  gif_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface WorkoutLog {
   id: string;
   client_id: string;

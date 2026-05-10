@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getClientDetail } from "@/lib/clients/queries";
 import { getActivePlan } from "@/lib/workouts/queries";
+import { listExerciseLibrary } from "@/lib/exercise-library/queries";
 import { readLocaleFromCookie } from "@/lib/i18n/locale-cookie";
 import { PlanBuilder } from "@/components/admin/workouts/plan-builder";
 
@@ -16,7 +17,10 @@ export default async function ClientWorkoutPage({
   const detail = await getClientDetail(params.clientId);
   if (!detail) notFound();
   const locale = readLocaleFromCookie();
-  const planWithDays = await getActivePlan(params.clientId);
+  const [planWithDays, library] = await Promise.all([
+    getActivePlan(params.clientId),
+    listExerciseLibrary(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -41,6 +45,7 @@ export default async function ClientWorkoutPage({
         clientId={params.clientId}
         locale={locale}
         plan={planWithDays}
+        library={library}
       />
     </div>
   );

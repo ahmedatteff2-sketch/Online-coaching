@@ -24,15 +24,17 @@ import {
 } from "@/lib/workouts/actions";
 import type { Locale } from "@/lib/i18n/config";
 import type { PlanWithDays } from "@/lib/workouts/queries";
+import type { ExerciseLibraryItem } from "@/types/database";
 import { DayExercises } from "./day-exercises";
 
 interface Props {
   clientId: string;
   locale: Locale;
   plan: PlanWithDays | null;
+  library: ExerciseLibraryItem[];
 }
 
-export function PlanBuilder({ clientId, locale, plan }: Props) {
+export function PlanBuilder({ clientId, locale, plan, library }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +143,7 @@ export function PlanBuilder({ clientId, locale, plan }: Props) {
               dayNumber={d.day.day_number}
               dayName={d.day.day_name}
               exercises={d.exercises}
+              library={library}
             />
           ))
         )}
@@ -363,6 +366,7 @@ function DayCard({
   dayNumber,
   dayName,
   exercises,
+  library,
 }: {
   clientId: string;
   locale: Locale;
@@ -370,6 +374,7 @@ function DayCard({
   dayNumber: number;
   dayName: string;
   exercises: import("@/types/database").Exercise[];
+  library: ExerciseLibraryItem[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -434,6 +439,7 @@ function DayCard({
           clientId={clientId}
           locale={locale}
           exercises={exercises}
+          library={library}
         />
       </CardContent>
     </Card>
