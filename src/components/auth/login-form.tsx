@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { checkLoginThrottle } from "@/lib/auth/login-throttle";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,17 @@ export function LoginForm() {
     event.preventDefault();
     setError(null);
     setPending(true);
+
+    // Server-side IP/email throttle. Supabase has per-account back-off
+    // but not per-IP, so a credential-stuffing run that rotates the
+    // email field would otherwise slip past Supabase's own limits.
+    const throttle = await checkLoginThrottle(email);
+    if (!throttle.ok) {
+      setError(throttle.error ?? "Too many attempts. Try again later.");
+      setPending(false);
+      return;
+    }
+
     const supabase = createClient();
     const { data, error: signInError } = await supabase.auth.signInWithPassword(
       {

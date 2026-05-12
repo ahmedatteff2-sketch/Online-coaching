@@ -1,10 +1,15 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
-/** Returns ok=true when the current user is an authenticated admin. */
-export async function assertAdmin(): Promise<
-  { ok: true } | { ok: false; error: string }
-> {
+export type AdminGuardResult =
+  | { ok: true; userId: string }
+  | { ok: false; error: string };
+
+/**
+ * Returns ok=true with the current user's id when the caller is an
+ * authenticated admin. The id is useful for audit logging.
+ */
+export async function assertAdmin(): Promise<AdminGuardResult> {
   const supabase = createClient();
   const {
     data: { user },
@@ -20,5 +25,5 @@ export async function assertAdmin(): Promise<
   if (data?.role !== "admin") {
     return { ok: false, error: "Forbidden — admin access required." };
   }
-  return { ok: true };
+  return { ok: true, userId: user.id };
 }

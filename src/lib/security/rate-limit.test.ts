@@ -8,23 +8,28 @@ import {
 afterEach(() => resetRateLimitsForTests());
 
 describe("checkRateLimit", () => {
-  it("allows attempts up to the configured max", () => {
+  it("allows attempts up to the configured max", async () => {
     const now = 1000;
     const tick = () => now;
     for (let i = 0; i < 5; i += 1) {
-      const r = checkRateLimit({ key: "k", max: 5, windowMs: 1000, now: tick });
+      const r = await checkRateLimit({
+        key: "k",
+        max: 5,
+        windowMs: 1000,
+        now: tick,
+      });
       expect(r.ok).toBe(true);
       expect(r.remaining).toBe(4 - i);
     }
   });
 
-  it("blocks the next attempt past the limit and reports retryAt", () => {
+  it("blocks the next attempt past the limit and reports retryAt", async () => {
     const now = 1000;
     const tick = () => now;
     for (let i = 0; i < 3; i += 1) {
-      checkRateLimit({ key: "k2", max: 3, windowMs: 1000, now: tick });
+      await checkRateLimit({ key: "k2", max: 3, windowMs: 1000, now: tick });
     }
-    const denied = checkRateLimit({
+    const denied = await checkRateLimit({
       key: "k2",
       max: 3,
       windowMs: 1000,
@@ -35,14 +40,14 @@ describe("checkRateLimit", () => {
     expect(denied.retryAt).toBe(2000);
   });
 
-  it("forgets attempts that fall outside the window", () => {
+  it("forgets attempts that fall outside the window", async () => {
     let now = 1000;
     const tick = () => now;
     for (let i = 0; i < 3; i += 1) {
-      checkRateLimit({ key: "k3", max: 3, windowMs: 1000, now: tick });
+      await checkRateLimit({ key: "k3", max: 3, windowMs: 1000, now: tick });
     }
     now = 2500; // > windowMs after the first attempt
-    const r = checkRateLimit({
+    const r = await checkRateLimit({
       key: "k3",
       max: 3,
       windowMs: 1000,
@@ -51,13 +56,18 @@ describe("checkRateLimit", () => {
     expect(r.ok).toBe(true);
   });
 
-  it("isolates buckets by key", () => {
+  it("isolates buckets by key", async () => {
     const now = 0;
     const tick = () => now;
-    checkRateLimit({ key: "a", max: 1, windowMs: 1000, now: tick });
-    const r = checkRateLimit({ key: "b", max: 1, windowMs: 1000, now: tick });
+    await checkRateLimit({ key: "a", max: 1, windowMs: 1000, now: tick });
+    const r = await checkRateLimit({
+      key: "b",
+      max: 1,
+      windowMs: 1000,
+      now: tick,
+    });
     expect(r.ok).toBe(true);
-    const denied = checkRateLimit({
+    const denied = await checkRateLimit({
       key: "a",
       max: 1,
       windowMs: 1000,

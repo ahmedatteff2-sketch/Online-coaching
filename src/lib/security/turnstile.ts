@@ -3,13 +3,16 @@ import "server-only";
 /**
  * Cloudflare Turnstile server-side verification.
  *
- * Turnstile is only enforced when both env vars are set:
+ * Turnstile is enforced when both env vars are set:
  *   - NEXT_PUBLIC_TURNSTILE_SITE_KEY   (browser, for the widget)
  *   - TURNSTILE_SECRET_KEY             (server, for this verification call)
  *
- * When either is unset (local dev, previews without a configured site
- * key, etc) we skip verification to keep the apply form usable. That is
- * the recommended Cloudflare pattern — see the widget page for details.
+ * Behaviour when env vars are missing:
+ *   - In `production` we **fail closed** — a missing CAPTCHA config in
+ *     prod is a deployment error, not a feature. Returning `ok: true`
+ *     would let bots through silently.
+ *   - In `development` / `test` we skip verification so the apply form is
+ *     usable locally without provisioning a Cloudflare account.
  */
 
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -26,11 +29,21 @@ export interface TurnstileVerifyResult {
   errorCodes?: string[];
 }
 
+function isProductionRuntime(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
 export async function verifyTurnstileToken(
   token: string | null | undefined,
   remoteIp?: string | null,
 ): Promise<TurnstileVerifyResult> {
   if (!isTurnstileEnabled()) {
+    if (isProductionRuntime()) {
+      console.error(
+        "Turnstile is not configured in production — refusing the request.",
+      );
+      return { ok: false, errorCodes: ["turnstile-not-configured"] };
+    }
     return { ok: true };
   }
   if (!token) {

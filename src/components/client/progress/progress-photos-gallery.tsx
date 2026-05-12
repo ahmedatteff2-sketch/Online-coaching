@@ -41,6 +41,16 @@ const ALLOWED_IMAGE_TYPES = [
 ];
 const ALLOWED_IMAGE_EXTS = ["jpg", "jpeg", "png", "webp", "heic", "heif"];
 
+function randomSuffix(bytes: number): string {
+  const buf = new Uint8Array(bytes);
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    globalThis.crypto.getRandomValues(buf);
+  } else {
+    for (let i = 0; i < buf.length; i += 1) buf[i] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 function inferExtension(file: File): string {
   const fromName = file.name.split(".").pop()?.toLowerCase() ?? "";
   if (ALLOWED_IMAGE_EXTS.includes(fromName)) return fromName;
@@ -95,9 +105,11 @@ export function ProgressPhotosGallery({ locale, clientId, photos }: Props) {
     try {
       const supabase = createBrowserSupabase();
       const ext = inferExtension(file);
-      const path = `${clientId}/${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}.${ext}`;
+      // Use Web Crypto for the random suffix so the upload path is not
+      // predictable. The server enforces a strict path regex
+      // (`<uuid>/<filename>`) and rejects anything malformed; using
+      // Math.random here would still work but is needlessly weak.
+      const path = `${clientId}/${Date.now()}-${randomSuffix(6)}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("progress-photos")
         .upload(path, file, { upsert: false });

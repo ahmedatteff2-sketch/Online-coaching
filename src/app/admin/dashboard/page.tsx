@@ -107,7 +107,7 @@ export default async function AdminDashboardPage() {
           <Link
             href="/"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-card/70"
           >
             View live site

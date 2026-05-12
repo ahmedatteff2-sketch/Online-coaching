@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { assertAdmin } from "@/lib/auth/admin-guard";
+import { recordAdminAction } from "@/lib/observability/audit";
+import { log } from "@/lib/observability/logger";
+import { safeHttpUrl } from "@/lib/utils/safe-url";
 import type {
   BillingPeriod,
   PaymentMethod,
@@ -148,7 +151,10 @@ export async function createPayment(
     method,
     reference_number: asText(input.reference_number),
     sender_phone: asText(input.sender_phone),
-    receipt_url: asText(input.receipt_url),
+    // Reject anything that isn't a real http(s) URL so we never store
+    // `javascript:` / `data:` schemes that would later be rendered in
+    // the admin UI.
+    receipt_url: safeHttpUrl(asText(input.receipt_url)),
     period_start: periodStart,
     period_end: periodEnd,
     duration_days: effectiveDuration,
@@ -165,7 +171,7 @@ export async function createPayment(
     .select("id")
     .maybeSingle();
   if (error) {
-    console.error("createPayment failed", error);
+    log.error("createPayment failed", { err: error });
     return { ok: false, error: error.message };
   }
   const id = (data as { id: string } | null)?.id;
@@ -174,6 +180,14 @@ export async function createPayment(
   if (willConfirm && clientId) {
     await recomputeClientSubscription(supabase, clientId);
   }
+
+  await recordAdminAction({
+    actor_id: guard.userId,
+    action: willConfirm ? "payment.create_and_confirm" : "payment.create",
+    target_table: "payments",
+    target_id: id,
+    details: { amount, status: payload.status, client_id: clientId },
+  });
 
   revalidatePath("/admin/payments");
   if (clientId) revalidatePath(`/admin/clients/${clientId}`);
@@ -207,6 +221,14 @@ export async function confirmPayment(id: string): Promise<ActionResult> {
   if (current.client_id) {
     await recomputeClientSubscription(supabase, current.client_id);
   }
+
+  await recordAdminAction({
+    actor_id: guard.userId,
+    action: "payment.confirm",
+    target_table: "payments",
+    target_id: id,
+    details: { client_id: current.client_id },
+  });
 
   revalidatePath("/admin/payments");
   revalidatePath(`/admin/payments/${id}`);
@@ -246,6 +268,15 @@ export async function rejectPayment(
   if (current.client_id) {
     await recomputeClientSubscription(supabase, current.client_id);
   }
+
+  await recordAdminAction({
+    actor_id: guard.userId,
+    action: "payment.reject",
+    target_table: "payments",
+    target_id: id,
+    details: { client_id: current.client_id, reason: reason?.slice(0, 200) },
+  });
+
   revalidatePath("/admin/payments");
   revalidatePath(`/admin/payments/${id}`);
   return { ok: true };
@@ -267,6 +298,15 @@ export async function deletePayment(id: string): Promise<ActionResult> {
   if (current?.client_id) {
     await recomputeClientSubscription(supabase, current.client_id);
   }
+
+  await recordAdminAction({
+    actor_id: guard.userId,
+    action: "payment.delete",
+    target_table: "payments",
+    target_id: id,
+    details: { client_id: current?.client_id },
+  });
+
   revalidatePath("/admin/payments");
   return { ok: true };
 }
@@ -306,5 +346,10 @@ async function recomputeClientSubscription(
   const { error } = await supabase.rpc("recompute_client_subscription", {
     target_client: clientId,
   });
-  if (error) console.error("recompute_client_subscription failed", error);
+  if (error) {
+    log.error("recompute_client_subscription failed", {
+      err: error,
+      client_id: clientId,
+    });
+  }
 }

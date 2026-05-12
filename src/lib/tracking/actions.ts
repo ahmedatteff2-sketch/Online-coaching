@@ -58,7 +58,7 @@ export async function logWeight(input: {
   const supabase = createClient();
   const clientId = await getCurrentClientId();
   if (!clientId) return { ok: false, error: "Not authenticated." };
-  const limit = checkRateLimit({
+  const limit = await checkRateLimit({
     key: `logWeight:${clientId}`,
     max: 30,
     windowMs: 60_000,
@@ -130,6 +130,16 @@ export async function saveBodyMeasurement(
 // ---------------------------------------------------------------------------
 // Progress photos
 // ---------------------------------------------------------------------------
+/**
+ * Strict allow-list for progress-photo `storage_path` values. Must match
+ * the RLS-enforced bucket layout `<client_uuid>/<filename>` where the
+ * filename is a UUID + small extension (we generate these client-side
+ * and we don't want spam clients pushing arbitrary metadata into the
+ * column).
+ */
+const PROGRESS_PHOTO_PATH_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[A-Za-z0-9._\-]{1,128}$/;
+
 export async function addProgressPhoto(input: {
   storage_path: string;
   taken_on?: string;
@@ -138,15 +148,28 @@ export async function addProgressPhoto(input: {
   const supabase = createClient();
   const clientId = await getCurrentClientId();
   if (!clientId) return { ok: false, error: "Not authenticated." };
-  const limit = checkRateLimit({
+  const limit = await checkRateLimit({
     key: `addProgressPhoto:${clientId}`,
     max: 20,
     windowMs: 60_000,
   });
   if (!limit.ok) return { ok: false, error: rateLimitMessage(limit.retryAt) };
+
+  // Defence in depth: confirm the path matches the expected shape *and*
+  // belongs to the caller. RLS already enforces this at storage level,
+  // but rejecting bad input here gives a clearer error and prevents
+  // orphaned rows that point at someone else's bucket prefix.
+  const path = input.storage_path?.trim() ?? "";
+  if (!PROGRESS_PHOTO_PATH_RE.test(path)) {
+    return { ok: false, error: "Invalid storage path." };
+  }
+  if (!path.startsWith(`${clientId}/`)) {
+    return { ok: false, error: "Storage path does not belong to you." };
+  }
+
   const { error } = await supabase.from("progress_photos").insert({
     client_id: clientId,
-    storage_path: input.storage_path,
+    storage_path: path,
     taken_on: input.taken_on ?? new Date().toISOString().slice(0, 10),
     note: asText(input.note ?? null),
   });
@@ -195,7 +218,7 @@ export async function saveCheckin(
   const supabase = createClient();
   const clientId = await getCurrentClientId();
   if (!clientId) return { ok: false, error: "Not authenticated." };
-  const limit = checkRateLimit({
+  const limit = await checkRateLimit({
     key: `saveCheckin:${clientId}`,
     max: 30,
     windowMs: 60_000,

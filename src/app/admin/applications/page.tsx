@@ -40,10 +40,11 @@ const FILTERS: ("all" | ApplicationStatus)[] = [
 ];
 
 interface Props {
-  searchParams: { status?: string; package_id?: string };
+  searchParams: Promise<{ status?: string; package_id?: string }>;
 }
 
-export default async function AdminApplicationsPage({ searchParams }: Props) {
+export default async function AdminApplicationsPage(props: Props) {
+  const searchParams = await props.searchParams;
   const locale = readLocaleFromCookie();
   const t = (en: string, ar: string) => (locale === "ar" ? ar : en);
   const filter = (searchParams.status ?? "new") as "all" | ApplicationStatus;

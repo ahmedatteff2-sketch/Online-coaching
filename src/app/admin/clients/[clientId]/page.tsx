@@ -21,11 +21,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export default async function ClientDetailPage({
-  params,
-}: {
-  params: { clientId: string };
-}) {
+export default async function ClientDetailPage(
+  props: {
+    params: Promise<{ clientId: string }>;
+  }
+) {
+  const params = await props.params;
   const detail = await getClientDetail(params.clientId);
   if (!detail) notFound();
   const locale = readLocaleFromCookie();

@@ -75,7 +75,7 @@ export function CredentialsPanel({
         <a
           href={loginUrl}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
         >
           <ExternalLink className="h-4 w-4" />

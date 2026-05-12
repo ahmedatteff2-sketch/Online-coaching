@@ -234,7 +234,7 @@ function ExerciseCard({
               <a
                 href={safeVideoUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
                 {locale === "ar" ? "فيديو" : "Video"}

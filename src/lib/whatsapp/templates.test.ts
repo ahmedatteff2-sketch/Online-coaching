@@ -61,7 +61,7 @@ describe("paymentInstructionsMessage", () => {
 });
 
 describe("welcomeMessage", () => {
-  it("includes all login fields", () => {
+  it("includes all login fields when an explicit password is supplied", () => {
     const msg = welcomeMessage({
       clientName: "John",
       loginUrl: "https://example.com/login",
@@ -72,5 +72,18 @@ describe("welcomeMessage", () => {
     expect(msg).toContain("https://example.com/login");
     expect(msg).toContain("john@example.com");
     expect(msg).toContain("abc123!");
+  });
+
+  it("omits the password from the deeplink when not provided", () => {
+    const msg = welcomeMessage({
+      clientName: "John",
+      loginUrl: "https://example.com/login",
+      email: "john@example.com",
+      locale: "en",
+    });
+    expect(msg).toContain("https://example.com/login");
+    expect(msg).toContain("john@example.com");
+    expect(msg).toContain("separate message");
+    expect(msg).not.toMatch(/Temporary password:/i);
   });
 });

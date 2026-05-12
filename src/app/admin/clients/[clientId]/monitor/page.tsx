@@ -22,11 +22,12 @@ import { ClientWeightChart } from "@/components/admin/monitor/client-weight-char
 
 export const dynamic = "force-dynamic";
 
-export default async function ClientMonitorPage({
-  params,
-}: {
-  params: { clientId: string };
-}) {
+export default async function ClientMonitorPage(
+  props: {
+    params: Promise<{ clientId: string }>;
+  }
+) {
+  const params = await props.params;
   const detail = await getClientDetail(params.clientId);
   if (!detail) notFound();
   const locale = readLocaleFromCookie();
@@ -53,7 +54,6 @@ export default async function ClientMonitorPage({
         <ArrowLeft className="h-4 w-4" />
         {locale === "ar" ? "ملف العميل" : "Client profile"}
       </Link>
-
       <div>
         <p className="text-sm text-muted-foreground">
           {detail.profile.full_name ?? detail.profile.email}
@@ -62,7 +62,6 @@ export default async function ClientMonitorPage({
           {locale === "ar" ? "متابعة التقدم" : "Progress monitor"}
         </h1>
       </div>
-
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <ComplianceCard
           label={locale === "ar" ? "تمرين (٧ أيام)" : "Workout · 7d"}
@@ -81,7 +80,6 @@ export default async function ClientMonitorPage({
           value={summary.sleep_avg !== null ? `${summary.sleep_avg}/5` : "—"}
         />
       </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
@@ -99,7 +97,6 @@ export default async function ClientMonitorPage({
           <ClientWeightChart weights={weights} />
         </CardContent>
       </Card>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
@@ -151,7 +148,6 @@ export default async function ClientMonitorPage({
           )}
         </CardContent>
       </Card>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
@@ -174,11 +170,11 @@ export default async function ClientMonitorPage({
                   >
                     {url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      (<img
                         src={url}
                         alt={p.note ?? p.taken_on}
                         className="h-32 w-full object-cover"
-                      />
+                      />)
                     ) : (
                       <div className="flex h-32 w-full items-center justify-center bg-card text-xs text-muted-foreground">
                         —
@@ -194,7 +190,6 @@ export default async function ClientMonitorPage({
           )}
         </CardContent>
       </Card>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
