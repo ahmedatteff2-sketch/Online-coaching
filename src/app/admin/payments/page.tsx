@@ -23,10 +23,11 @@ const FILTERS: ("all" | PaymentStatus)[] = [
 ];
 
 interface Props {
-  searchParams: { status?: string };
+  searchParams: Promise<{ status?: string }>;
 }
 
-export default async function AdminPaymentsPage({ searchParams }: Props) {
+export default async function AdminPaymentsPage(props: Props) {
+  const searchParams = await props.searchParams;
   const locale = readLocaleFromCookie();
   const t = (en: string, ar: string) => (locale === "ar" ? ar : en);
   const filter = (searchParams.status ?? "all") as "all" | PaymentStatus;

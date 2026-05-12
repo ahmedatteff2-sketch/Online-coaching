@@ -6,10 +6,11 @@ import { PackageForm } from "@/components/admin/packages/package-form";
 export const dynamic = "force-dynamic";
 
 interface Props {
-  params: { packageId: string };
+  params: Promise<{ packageId: string }>;
 }
 
-export default async function AdminPackageEditPage({ params }: Props) {
+export default async function AdminPackageEditPage(props: Props) {
+  const params = await props.params;
   const locale = readLocaleFromCookie();
   const pkg = await getPackage(params.packageId);
   if (!pkg) notFound();

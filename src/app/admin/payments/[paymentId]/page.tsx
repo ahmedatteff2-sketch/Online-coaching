@@ -22,10 +22,11 @@ import type { CoachingApplication } from "@/types/database";
 export const dynamic = "force-dynamic";
 
 interface Props {
-  params: { paymentId: string };
+  params: Promise<{ paymentId: string }>;
 }
 
-export default async function PaymentDetailPage({ params }: Props) {
+export default async function PaymentDetailPage(props: Props) {
+  const params = await props.params;
   const locale = readLocaleFromCookie();
   const t = (en: string, ar: string) => (locale === "ar" ? ar : en);
   const payment = await getPayment(params.paymentId);
@@ -222,7 +223,7 @@ export default async function PaymentDetailPage({ params }: Props) {
                 <a
                   href={whatsappInstructionsLink}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
                 >
                   <MessageSquare className="h-4 w-4" />

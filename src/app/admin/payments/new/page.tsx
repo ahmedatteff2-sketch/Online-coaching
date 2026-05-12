@@ -16,10 +16,11 @@ import { NewPaymentForm } from "@/components/admin/payments/new-payment-form";
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: { client_id?: string; application_id?: string };
+  searchParams: Promise<{ client_id?: string; application_id?: string }>;
 }
 
-export default async function NewPaymentPage({ searchParams }: Props) {
+export default async function NewPaymentPage(props: Props) {
+  const searchParams = await props.searchParams;
   const locale = readLocaleFromCookie();
   const [clients, applications, packages] = await Promise.all([
     listClients(),

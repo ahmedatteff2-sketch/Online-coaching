@@ -1,12 +1,43 @@
 import { withSentryConfig } from "@sentry/nextjs";
 
+// =============================================================================
+// Content-Security-Policy
+// =============================================================================
+// Emitted in **Report-Only** mode so we don't break the app while we shake
+// out which third-party origins each page actually loads. Move to enforcing
+// mode (`Content-Security-Policy` header) once the report endpoint has
+// confirmed zero violations for the relevant paths.
+//
+// Origins:
+//   - `*.supabase.co` / `*.supabase.in`  : Postgres REST + Storage
+//   - `*.sentry.io`                       : crash reporting (optional)
+//   - `challenges.cloudflare.com`         : Turnstile widget
+//   - `www.youtube-nocookie.com`          : embedded workout videos
+//   - `i.ytimg.com`                       : YouTube thumbnails
+//   - `data:` / `blob:`                   : Next.js image optimizer + uploads
+const CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "frame-ancestors 'self'",
+  "object-src 'none'",
+  "form-action 'self'",
+  // Allow inline + eval for now because Next.js / Sentry inject some
+  // inline boot scripts. We'll tighten with nonces once we move to
+  // enforcing mode.
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://i.imgur.com https://res.cloudinary.com https://i.ytimg.com",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.in wss://*.supabase.in https://*.sentry.io https://challenges.cloudflare.com",
+  "frame-src https://www.youtube-nocookie.com https://challenges.cloudflare.com",
+  "media-src 'self' https://*.supabase.co https://*.supabase.in",
+  "worker-src 'self' blob:",
+  "upgrade-insecure-requests",
+].join("; ");
+
 // Default response headers applied to every route. These are the
 // industry-standard "low blast-radius" security headers that protect against
-// clickjacking, MIME sniffing, and over-broad referrer leakage. We
-// deliberately do NOT add a Content-Security-Policy here — Next.js inlines
-// scripts in dev and the project relies on a few third-party origins
-// (Supabase, Sentry, Resend, youtube-nocookie). Adding a strict CSP without
-// auditing every origin would break the app, so it is left as a follow-up.
+// clickjacking, MIME sniffing, and over-broad referrer leakage.
 const securityHeaders = [
   // Tell browsers to keep using HTTPS for two years and pre-load. Only
   // emitted in production responses; on http://localhost the browser ignores
@@ -21,14 +52,47 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Send the origin only on cross-origin navigations, never the full path.
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // Disable powerful browser features the app does not use.
+  // Disable powerful browser features the app does not use. We aim wide so
+  // a future bundled dependency can't quietly start asking the user for
+  // sensor / device access without an explicit allowlist change.
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=()",
+    value: [
+      "accelerometer=()",
+      "ambient-light-sensor=()",
+      "autoplay=(self)",
+      "battery=()",
+      "camera=()",
+      "display-capture=()",
+      "document-domain=()",
+      "encrypted-media=()",
+      "fullscreen=(self)",
+      "geolocation=()",
+      "gyroscope=()",
+      "hid=()",
+      "identity-credentials-get=()",
+      "idle-detection=()",
+      "magnetometer=()",
+      "microphone=()",
+      "midi=()",
+      "payment=()",
+      "picture-in-picture=(self)",
+      "publickey-credentials-get=()",
+      "screen-wake-lock=()",
+      "serial=()",
+      "sync-xhr=()",
+      "usb=()",
+      "web-share=(self)",
+      "xr-spatial-tracking=()",
+    ].join(", "),
   },
   // Cross-origin opener / resource isolation hardening.
   { key: "X-DNS-Prefetch-Control", value: "on" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  // Emit CSP in report-only mode so violations are visible in the
+  // browser console without breaking the app. Flip to
+  // `Content-Security-Policy` once the report stream is clean.
+  { key: "Content-Security-Policy-Report-Only", value: CSP_REPORT_ONLY },
 ];
 
 /** @type {import('next').NextConfig} */

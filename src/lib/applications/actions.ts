@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { assertAdmin } from "@/lib/auth/admin-guard";
 import { checkRateLimit, rateLimitMessage } from "@/lib/security/rate-limit";
+import { readClientIp } from "@/lib/security/client-ip";
 import { verifyTurnstileToken } from "@/lib/security/turnstile";
+import { log } from "@/lib/observability/logger";
 import {
   sendApplicationAcceptedEmail,
   sendApplicationReceivedEmail,
@@ -105,12 +106,25 @@ function asBool(value: unknown): boolean {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_NAME_LEN = 200;
+const MAX_EMAIL_LEN = 320;
+const MAX_PHONE_LEN = 32;
+const MAX_LONG_TEXT = 2000;
+const MAX_SHORT_TEXT = 1000;
 
-function readClientIp(): string {
-  const h = headers();
-  const fwd = h.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return h.get("x-real-ip") ?? "anon";
+/**
+ * Cap each free-text field at a sane upper bound so a spammer can't
+ * push multi-megabyte payloads through the public intake form. The
+ * server-side bounds are mirrored as `check` constraints in
+ * `0011_security_hardening.sql` to keep the DB safe against direct API
+ * abuse.
+ */
+function clampText(
+  value: string | null,
+  max: number,
+): string | null {
+  if (value === null) return null;
+  return value.length > max ? value.slice(0, max) : value;
 }
 
 export type CoachingApplicationFormData = Record<
@@ -127,7 +141,7 @@ export async function submitCoachingApplication(
   raw: CoachingApplicationFormData,
 ): Promise<ActionResult<{ id: string }>> {
   const ip = readClientIp();
-  const rl = checkRateLimit({
+  const rl = await checkRateLimit({
     key: `application:${ip}`,
     max: 3,
     windowMs: 60 * 60 * 1000,
@@ -159,6 +173,12 @@ export async function submitCoachingApplication(
   if (!fullName) return { ok: false, error: "Full name is required." };
   if (!EMAIL_RE.test(email)) return { ok: false, error: "Invalid email." };
   if (phone.length < 5) return { ok: false, error: "Invalid phone." };
+  if (fullName.length > MAX_NAME_LEN)
+    return { ok: false, error: "Full name is too long." };
+  if (email.length > MAX_EMAIL_LEN)
+    return { ok: false, error: "Email is too long." };
+  if (phone.length > MAX_PHONE_LEN)
+    return { ok: false, error: "Phone is too long." };
 
   const payload = {
     full_name: fullName,
@@ -178,25 +198,43 @@ export async function submitCoachingApplication(
     goal: asGoal(raw.goal),
     target_weight_kg: asNumber(raw.target_weight_kg),
     target_date: asDate(raw.target_date),
-    motivation_text: asText(raw.motivation_text),
+    motivation_text: clampText(asText(raw.motivation_text), MAX_LONG_TEXT),
 
     experience_level: asExperience(raw.experience_level),
     previous_coaching: asBool(raw.previous_coaching),
-    previous_results_text: asText(raw.previous_results_text),
+    previous_results_text: clampText(
+      asText(raw.previous_results_text),
+      MAX_LONG_TEXT,
+    ),
 
     training_days_per_week: asInt(raw.training_days_per_week),
     training_location: asLocation(raw.training_location),
-    available_equipment_text: asText(raw.available_equipment_text),
-    preferred_training_time: asText(raw.preferred_training_time),
+    available_equipment_text: clampText(
+      asText(raw.available_equipment_text),
+      MAX_LONG_TEXT,
+    ),
+    preferred_training_time: clampText(
+      asText(raw.preferred_training_time),
+      MAX_SHORT_TEXT,
+    ),
 
-    injuries_or_conditions: asText(raw.injuries_or_conditions),
-    medications: asText(raw.medications),
-    allergies: asText(raw.allergies),
-    surgeries_text: asText(raw.surgeries_text),
+    injuries_or_conditions: clampText(
+      asText(raw.injuries_or_conditions),
+      MAX_LONG_TEXT,
+    ),
+    medications: clampText(asText(raw.medications), MAX_SHORT_TEXT),
+    allergies: clampText(asText(raw.allergies), MAX_SHORT_TEXT),
+    surgeries_text: clampText(asText(raw.surgeries_text), MAX_LONG_TEXT),
 
-    dietary_restrictions: asText(raw.dietary_restrictions),
-    foods_disliked: asText(raw.foods_disliked),
-    current_diet_summary: asText(raw.current_diet_summary),
+    dietary_restrictions: clampText(
+      asText(raw.dietary_restrictions),
+      MAX_SHORT_TEXT,
+    ),
+    foods_disliked: clampText(asText(raw.foods_disliked), MAX_SHORT_TEXT),
+    current_diet_summary: clampText(
+      asText(raw.current_diet_summary),
+      MAX_LONG_TEXT,
+    ),
     water_intake_liters: asNumber(raw.water_intake_liters),
 
     occupation: asText(raw.occupation),
@@ -206,7 +244,7 @@ export async function submitCoachingApplication(
     smokes: asBool(raw.smokes),
 
     package_id: asText(raw.package_id),
-    notes: asText(raw.notes),
+    notes: clampText(asText(raw.notes), MAX_LONG_TEXT),
     locale: asText(raw.locale) === "ar" ? "ar" : "en",
     status: "new" as ApplicationStatus,
   };
@@ -219,7 +257,7 @@ export async function submitCoachingApplication(
     .maybeSingle();
 
   if (error) {
-    console.error("submitCoachingApplication failed", error);
+    log.error("submitCoachingApplication failed", { err: error });
     return { ok: false, error: "Could not submit your application." };
   }
 
@@ -232,7 +270,7 @@ export async function submitCoachingApplication(
     fullName: payload.full_name,
     locale: payload.locale === "ar" ? "ar" : "en",
   }).catch((err) => {
-    console.error("sendApplicationReceivedEmail failed", err);
+    log.error("sendApplicationReceivedEmail failed", { err });
   });
 
   return { ok: true, data: { id: (data as { id: string }).id } };
@@ -272,7 +310,7 @@ export async function updateApplicationStatus(
         fullName: row.full_name ?? "",
         locale: row.locale === "ar" ? "ar" : "en",
       }).catch((err) => {
-        console.error("sendApplicationAcceptedEmail failed", err);
+        log.error("sendApplicationAcceptedEmail failed", { err });
       });
     }
   }

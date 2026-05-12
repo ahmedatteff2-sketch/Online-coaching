@@ -47,10 +47,11 @@ const EXPERIENCE_LABEL: Record<string, { en: string; ar: string }> = {
 };
 
 interface Props {
-  params: { applicationId: string };
+  params: Promise<{ applicationId: string }>;
 }
 
-export default async function AdminApplicationDetailPage({ params }: Props) {
+export default async function AdminApplicationDetailPage(props: Props) {
+  const params = await props.params;
   const locale = readLocaleFromCookie();
   const t = (en: string, ar: string) => (locale === "ar" ? ar : en);
   const application = await getApplication(params.applicationId);
@@ -109,7 +110,7 @@ export default async function AdminApplicationDetailPage({ params }: Props) {
           <a
             href={whatsappHref}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <MessageSquare className="h-4 w-4" />
@@ -406,7 +407,7 @@ export default async function AdminApplicationDetailPage({ params }: Props) {
               <a
                 href={whatsappPaymentHref}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
               >
                 <MessageSquare className="h-4 w-4" />

@@ -52,7 +52,7 @@ export default async function SiteContentSectionPage({
         <Link
           href="/"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-card/70"
         >
           <ExternalLink className="h-4 w-4" />

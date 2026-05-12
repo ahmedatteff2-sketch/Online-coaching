@@ -25,10 +25,11 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  searchParams: { package_id?: string };
+  searchParams: Promise<{ package_id?: string }>;
 }
 
-export default async function ApplyPage({ searchParams }: Props) {
+export default async function ApplyPage(props: Props) {
+  const searchParams = await props.searchParams;
   const locale = readLocaleFromCookie();
   const packages = await listActivePackages();
   const t = (en: string, ar: string) => (locale === "ar" ? ar : en);

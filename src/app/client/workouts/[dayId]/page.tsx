@@ -12,11 +12,12 @@ import { WorkoutSession } from "@/components/client/workouts/workout-session";
 
 export const dynamic = "force-dynamic";
 
-export default async function ClientWorkoutDayPage({
-  params,
-}: {
-  params: { dayId: string };
-}) {
+export default async function ClientWorkoutDayPage(
+  props: {
+    params: Promise<{ dayId: string }>;
+  }
+) {
+  const params = await props.params;
   const [dayData, planNotes] = await Promise.all([
     getDayWithExercises(params.dayId),
     getPlanNotesForDay(params.dayId),

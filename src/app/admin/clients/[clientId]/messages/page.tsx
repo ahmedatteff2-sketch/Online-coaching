@@ -9,11 +9,12 @@ import { MessageThread } from "@/components/messages/message-thread";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminClientMessagesPage({
-  params,
-}: {
-  params: { clientId: string };
-}) {
+export default async function AdminClientMessagesPage(
+  props: {
+    params: Promise<{ clientId: string }>;
+  }
+) {
+  const params = await props.params;
   const detail = await getClientDetail(params.clientId);
   if (!detail) notFound();
 

@@ -85,40 +85,68 @@ export interface WelcomeMessageInput {
   clientName: string;
   loginUrl: string;
   email: string;
-  tempPassword: string;
+  /**
+   * Optional temporary password. Including this field in a WhatsApp
+   * message means the password lives in the conversation forever and
+   * in WhatsApp's web/desktop backups, so callers should prefer
+   * omitting it and using an out-of-band channel (in-person, a
+   * password manager share, or a one-time reset link the user can
+   * trigger themselves).
+   *
+   * @deprecated Send the password separately, or use an invite link.
+   */
+  tempPassword?: string;
   locale: Locale;
 }
 
 export function welcomeMessage(input: WelcomeMessageInput): string {
   const coach = coachDisplayName(input.locale);
   if (input.locale === "ar") {
-    return [
+    const lines = [
       `تمام ${input.clientName}، استلمت الدفعة ✅`,
       ``,
       `حسابك على المنصة اتفعّل. بيانات دخولك:`,
       `الرابط: ${input.loginUrl}`,
       `الإيميل: ${input.email}`,
-      `كلمة السر المؤقتة: ${input.tempPassword}`,
+    ];
+    if (input.tempPassword) {
+      lines.push(`كلمة السر المؤقتة: ${input.tempPassword}`);
+    } else {
+      lines.push(
+        `كلمة السر: هابعتهالك في رسالة منفصلة عشان تفضل آمنة.`,
+      );
+    }
+    lines.push(
       ``,
       `(غيّر كلمة السر بعد أول دخول.)`,
       `في أول دخول هتلاقي الخطة ومقاييسك. يلا نبدأ 💪`,
       ``,
       `— ${coach}`,
-    ].join("\n");
+    );
+    return lines.join("\n");
   }
-  return [
+  const lines = [
     `${input.clientName}, payment received ✅`,
     ``,
     `Your account is live. Login details:`,
     `URL: ${input.loginUrl}`,
     `Email: ${input.email}`,
-    `Temporary password: ${input.tempPassword}`,
+  ];
+  if (input.tempPassword) {
+    lines.push(`Temporary password: ${input.tempPassword}`);
+  } else {
+    lines.push(
+      `Password: I'll send it to you in a separate message so it stays secure.`,
+    );
+  }
+  lines.push(
     ``,
     `(Change your password after your first login.)`,
     `Log in to see your plan and baseline measurements. Let's go 💪`,
     ``,
     `— ${coach}`,
-  ].join("\n");
+  );
+  return lines.join("\n");
 }
 
 export function renewalReminderMessage(input: {

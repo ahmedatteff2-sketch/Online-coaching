@@ -8,11 +8,12 @@ import { NutritionPlanEditor } from "@/components/admin/nutrition/nutrition-plan
 
 export const dynamic = "force-dynamic";
 
-export default async function ClientNutritionPage({
-  params,
-}: {
-  params: { clientId: string };
-}) {
+export default async function ClientNutritionPage(
+  props: {
+    params: Promise<{ clientId: string }>;
+  }
+) {
+  const params = await props.params;
   const detail = await getClientDetail(params.clientId);
   if (!detail) notFound();
   const locale = readLocaleFromCookie();

@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { assertAdmin } from "@/lib/auth/admin-guard";
+import { recordAdminAction } from "@/lib/observability/audit";
+import { log } from "@/lib/observability/logger";
 import type { ExperienceLevel, TrainingGoal } from "@/types/database";
 
 export interface ActionResult<T = void> {
@@ -87,19 +89,32 @@ export async function createNewClient(
   if (!email || !password || !fullName) {
     return { ok: false, error: "Email, password, and full name are required." };
   }
-  if (password.length < 8) {
-    return { ok: false, error: "Password must be at least 8 characters." };
+  if (password.length < 12) {
+    return {
+      ok: false,
+      error:
+        "Password must be at least 12 characters. Use the generator if you need a strong one.",
+    };
+  }
+  if (fullName.length > 200) {
+    return { ok: false, error: "Full name is too long." };
+  }
+  if (email.length > 320) {
+    return { ok: false, error: "Email is too long." };
   }
 
   const service = createServiceClient();
 
-  // 1. create the auth user (idempotent — handle already-exists below)
+  // 1. create the auth user (idempotent — handle already-exists below).
+  // We deliberately do NOT put `role` in user_metadata: the
+  // handle_new_user trigger ignores it (see 0011_security_hardening.sql)
+  // and the profile row below is the only source of truth for roles.
   const { data: created, error: createErr } =
     await service.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: fullName, role: "client" },
+      user_metadata: { full_name: fullName },
     });
 
   if (createErr) {
@@ -148,6 +163,16 @@ export async function createNewClient(
   const clientId = (clientRow as { id: string } | null)?.id;
   if (!clientId) return { ok: false, error: "Failed to create client row." };
 
+  // Append-only audit trail of admin actions. Failure is non-fatal
+  // (the helper logs and swallows) so we never block the client
+  // creation just because the audit table is unreachable.
+  await recordAdminAction({
+    actor_id: guard.userId,
+    action: "client.create",
+    target_table: "clients",
+    target_id: clientId,
+  });
+
   revalidatePath("/admin/clients");
   return { ok: true, data: { clientId } };
 }
@@ -165,8 +190,12 @@ export async function resetClientPassword(input: {
   if (!guard.ok) return { ok: false, error: guard.error };
 
   const password = input.password;
-  if (!password || password.length < 8) {
-    return { ok: false, error: "Password must be at least 8 characters." };
+  if (!password || password.length < 12) {
+    return {
+      ok: false,
+      error:
+        "Password must be at least 12 characters. Use the generator if you need a strong one.",
+    };
   }
 
   const supabase = createClient();
@@ -188,7 +217,17 @@ export async function resetClientPassword(input: {
   const { error } = await service.auth.admin.updateUserById(client.user_id, {
     password,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    log.error("resetClientPassword failed", { err: error, target_id: client.id });
+    return { ok: false, error: error.message };
+  }
+
+  await recordAdminAction({
+    actor_id: guard.userId,
+    action: "client.reset_password",
+    target_table: "clients",
+    target_id: client.id,
+  });
 
   revalidatePath(`/admin/clients/${client.id}`);
   return { ok: true, data: { email: profile.email } };

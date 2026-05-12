@@ -315,7 +315,7 @@ export async function logSet(
     .maybeSingle()) as { data: { id: string } | null };
   if (!client) return { ok: false, error: "Client profile not found." };
 
-  const limit = checkRateLimit({
+  const limit = await checkRateLimit({
     key: `logSet:${client.id}`,
     max: 120,
     windowMs: 60_000,
