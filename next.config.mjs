@@ -3,11 +3,6 @@ import { withSentryConfig } from "@sentry/nextjs";
 // =============================================================================
 // Content-Security-Policy
 // =============================================================================
-// Emitted in **Report-Only** mode so we don't break the app while we shake
-// out which third-party origins each page actually loads. Move to enforcing
-// mode (`Content-Security-Policy` header) once the report endpoint has
-// confirmed zero violations for the relevant paths.
-//
 // Origins:
 //   - `*.supabase.co` / `*.supabase.in`  : Postgres REST + Storage
 //   - `*.sentry.io`                       : crash reporting (optional)
@@ -15,15 +10,19 @@ import { withSentryConfig } from "@sentry/nextjs";
 //   - `www.youtube-nocookie.com`          : embedded workout videos
 //   - `i.ytimg.com`                       : YouTube thumbnails
 //   - `data:` / `blob:`                   : Next.js image optimizer + uploads
-const CSP_REPORT_ONLY = [
+//
+// Reporting: violations are POSTed to `/api/csp-report` which logs them
+// through the structured logger so we can spot regressions before flipping
+// to enforcing mode.
+const CSP_DIRECTIVES = [
   "default-src 'self'",
   "base-uri 'self'",
   "frame-ancestors 'self'",
   "object-src 'none'",
   "form-action 'self'",
-  // Allow inline + eval for now because Next.js / Sentry inject some
-  // inline boot scripts. We'll tighten with nonces once we move to
-  // enforcing mode.
+  // Allow inline + eval because Next.js / Sentry inject some inline boot
+  // scripts. Tighten with nonces in a follow-up once every inline script
+  // is accounted for.
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://i.imgur.com https://res.cloudinary.com https://i.ytimg.com",
@@ -32,8 +31,16 @@ const CSP_REPORT_ONLY = [
   "frame-src https://www.youtube-nocookie.com https://challenges.cloudflare.com",
   "media-src 'self' https://*.supabase.co https://*.supabase.in",
   "worker-src 'self' blob:",
+  "report-uri /api/csp-report",
   "upgrade-insecure-requests",
 ].join("; ");
+
+// Set `CSP_ENFORCE=1` once the report stream is clean to switch from
+// Report-Only (browser logs violations) to Enforce (browser blocks them).
+const cspEnforce = process.env.CSP_ENFORCE === "1";
+const cspHeaderKey = cspEnforce
+  ? "Content-Security-Policy"
+  : "Content-Security-Policy-Report-Only";
 
 // Default response headers applied to every route. These are the
 // industry-standard "low blast-radius" security headers that protect against
@@ -89,10 +96,21 @@ const securityHeaders = [
   // Cross-origin opener / resource isolation hardening.
   { key: "X-DNS-Prefetch-Control", value: "on" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  // Emit CSP in report-only mode so violations are visible in the
-  // browser console without breaking the app. Flip to
-  // `Content-Security-Policy` once the report stream is clean.
-  { key: "Content-Security-Policy-Report-Only", value: CSP_REPORT_ONLY },
+  // Emit CSP in report-only mode by default so violations are visible in
+  // the browser console without breaking the app. Set CSP_ENFORCE=1 in
+  // the environment once the report stream is clean to flip the same
+  // policy to enforcing mode.
+  { key: cspHeaderKey, value: CSP_DIRECTIVES },
+  // Report-To header pairs with `report-to` / `report-uri` so the browser
+  // knows where to POST violation reports.
+  {
+    key: "Report-To",
+    value: JSON.stringify({
+      group: "csp-endpoint",
+      max_age: 10886400,
+      endpoints: [{ url: "/api/csp-report" }],
+    }),
+  },
 ];
 
 /** @type {import('next').NextConfig} */

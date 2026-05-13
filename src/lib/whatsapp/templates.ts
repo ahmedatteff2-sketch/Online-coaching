@@ -69,7 +69,9 @@ export function paymentInstructionsMessage(
     `Amount due: ${input.amount} ${currency}`,
     ``,
     `Payment method: Vodafone Cash`,
-    vodafone ? `Number: ${vodafone}` : `Number: (I'll share it in a follow-up message)`,
+    vodafone
+      ? `Number: ${vodafone}`
+      : `Number: (I'll share it in a follow-up message)`,
     ``,
     `Once you've sent the money, please reply with:`,
     `1) A screenshot of the confirmation SMS`,
@@ -112,9 +114,7 @@ export function welcomeMessage(input: WelcomeMessageInput): string {
     if (input.tempPassword) {
       lines.push(`كلمة السر المؤقتة: ${input.tempPassword}`);
     } else {
-      lines.push(
-        `كلمة السر: هابعتهالك في رسالة منفصلة عشان تفضل آمنة.`,
-      );
+      lines.push(`كلمة السر: هابعتهالك في رسالة منفصلة عشان تفضل آمنة.`);
     }
     lines.push(
       ``,
@@ -181,7 +181,7 @@ export function normalizePhone(phone: string): string {
 
 export function buildWhatsappLink(phone: string, message: string): string {
   const digits = normalizePhone(phone);
-  const encoded = encodeURIComponent(message);
-  if (!digits) return `https://wa.me/?text=${encoded}`;
-  return `https://wa.me/${digits}?text=${encoded}`;
+  const base = digits ? `https://wa.me/${digits}` : `https://wa.me/`;
+  if (!message) return base;
+  return `${base}?text=${encodeURIComponent(message)}`;
 }

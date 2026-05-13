@@ -24,6 +24,10 @@ import { log } from "./logger";
  * Fields like `email`, `phone`, etc. should be omitted from `details`
  * unless you've already redacted them — the table is queryable by
  * future admins and stays around forever.
+ *
+ * The helper accepts `details` for ergonomic call sites; values are
+ * stored in the `metadata` jsonb column declared in
+ * `0011_security_hardening.sql`.
  */
 export interface AdminActionInput {
   actor_id: string;
@@ -33,7 +37,9 @@ export interface AdminActionInput {
   details?: Record<string, unknown> | null;
 }
 
-export async function recordAdminAction(input: AdminActionInput): Promise<void> {
+export async function recordAdminAction(
+  input: AdminActionInput,
+): Promise<void> {
   try {
     const service = createServiceClient();
     const { error } = await service.from("admin_audit_log").insert({
@@ -41,7 +47,7 @@ export async function recordAdminAction(input: AdminActionInput): Promise<void> 
       action: input.action,
       target_table: input.target_table ?? null,
       target_id: input.target_id ?? null,
-      details: input.details ?? null,
+      metadata: input.details ?? {},
     });
     if (error) {
       log.warn("recordAdminAction insert failed", {
