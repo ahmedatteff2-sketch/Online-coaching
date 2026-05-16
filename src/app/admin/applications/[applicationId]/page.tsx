@@ -61,9 +61,9 @@ export default async function AdminApplicationDetailPage(props: Props) {
     ? await getPackage(application.package_id)
     : null;
 
-  // WhatsApp link expects digits only
-  const phoneDigits = application.phone.replace(/[^\d]/g, "");
-  const whatsappHref = `https://wa.me/${phoneDigits}`;
+  // Use the shared helper so phone normalisation + URL-encoding stay
+  // consistent with the rest of the WhatsApp deep-link surface.
+  const whatsappHref = buildWhatsappLink(application.phone, "");
   const phoneHref = `tel:${application.phone}`;
   const emailHref = `mailto:${application.email}`;
 

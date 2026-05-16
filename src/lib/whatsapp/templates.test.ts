@@ -25,6 +25,13 @@ describe("buildWhatsappLink", () => {
     const link = buildWhatsappLink("", "hi");
     expect(link).toBe("https://wa.me/?text=hi");
   });
+
+  it("omits the query string when no message is supplied", () => {
+    expect(buildWhatsappLink("+20 100 111 2222", "")).toBe(
+      "https://wa.me/201001112222",
+    );
+    expect(buildWhatsappLink("", "")).toBe("https://wa.me/");
+  });
 });
 
 describe("paymentInstructionsMessage", () => {

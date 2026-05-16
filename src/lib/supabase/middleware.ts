@@ -10,23 +10,10 @@ type ClientSubscriptionRow = {
   subscription_ends_at: string | null;
 } | null;
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/api/auth"];
 const ADMIN_PREFIX = "/admin";
 const CLIENT_PREFIX = "/client";
 /** Paths a suspended/expired client is allowed to reach inside /client. */
-const CLIENT_ALLOWLIST_WHEN_SUSPENDED = [
-  "/client/subscription",
-];
-
-function isPublicPath(pathname: string) {
-  if (pathname.startsWith("/_next")) return true;
-  if (pathname.startsWith("/favicon")) return true;
-  if (pathname.startsWith("/images")) return true;
-  if (pathname.startsWith("/api/")) return true;
-  return PUBLIC_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
-}
+const CLIENT_ALLOWLIST_WHEN_SUSPENDED = ["/client/subscription"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -131,9 +118,6 @@ export async function updateSession(request: NextRequest) {
       profile?.role === "admin" ? "/admin/dashboard" : "/client/dashboard";
     return NextResponse.redirect(url);
   }
-
-  // Reference isPublicPath so import stays meaningful for future expansion.
-  void isPublicPath;
 
   return supabaseResponse;
 }

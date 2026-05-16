@@ -42,6 +42,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Non-blocking dependency audit so we surface new advisories in PR
+      # logs without failing the build. Upgrade to a strict gate once the
+      # tree is consistently clean.
+      - name: Audit dependencies (non-blocking)
+        continue-on-error: true
+        run: pnpm audit --prod --audit-level=moderate
+
       - name: Lint
         run: pnpm lint
 
