@@ -47,11 +47,12 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Brand
+        // Brand — premium dark gym palette
         brand: {
-          lime: "#a3e635",
-          orange: "#f97316",
-          charcoal: "#0f0f0f",
+          red: "#DC2626",
+          yellow: "#FACC15",
+          black: "#0A0A0A",
+          off: "#F5F5F4",
         },
       },
       borderRadius: {
@@ -60,17 +61,27 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-jakarta)", "system-ui", "sans-serif"],
-        display: ["var(--font-syne)", "system-ui", "sans-serif"],
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        display: [
+          "var(--font-bebas)",
+          "Impact",
+          "Haettenschweiler",
+          "sans-serif",
+        ],
       },
       keyframes: {
         "fade-up": {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        ticker: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         "fade-up": "fade-up 0.5s ease-out",
+        ticker: "ticker 40s linear infinite",
       },
     },
   },

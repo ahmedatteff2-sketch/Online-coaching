@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Syne } from "next/font/google";
+import { Bebas_Neue, Inter } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/components/i18n-provider";
 import { ToastProvider } from "@/components/ui/toast-provider";
@@ -14,13 +14,16 @@ import {
   siteUrl,
 } from "@/lib/seo/site";
 
-const jakarta = Plus_Jakarta_Sans({
+// Inter for body — wide weight range, neutral. Bebas Neue for display —
+// tall condensed grotesk that reads as "gym sign" rather than "AI template".
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-jakarta",
+  variable: "--font-inter",
 });
-const syne = Syne({
+const bebas = Bebas_Neue({
   subsets: ["latin"],
-  variable: "--font-syne",
+  weight: ["400"],
+  variable: "--font-bebas",
 });
 
 export const metadata: Metadata = {
@@ -55,7 +58,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f0f0f",
+  themeColor: "#0A0A0A",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -73,7 +76,7 @@ export default function RootLayout({
     <html
       lang={locale}
       dir={dir}
-      className={`${jakarta.variable} ${syne.variable}`}
+      className={`${inter.variable} ${bebas.variable}`}
     >
       <body>
         <I18nProvider locale={locale}>{children}</I18nProvider>
