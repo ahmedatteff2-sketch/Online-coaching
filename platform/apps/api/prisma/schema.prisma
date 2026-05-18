@@ -1,0 +1,651 @@
+// Fitness Coaching Platform — Prisma Schema
+// Generated for Postgres. Run: `npm run db:migrate` then `npm run db:seed`.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// Enums
+// =============================================================================
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Goal {
+  MUSCLE_GAIN
+  FAT_LOSS
+  STRENGTH
+  ENDURANCE
+  GENERAL_FITNESS
+  RECOMP
+}
+
+enum FitnessLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum PhotoType {
+  FRONT
+  SIDE
+  BACK
+  OTHER
+}
+
+enum MealStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+}
+
+enum NoteKind {
+  GENERAL
+  WORKOUT
+  NUTRITION
+  WEEKLY_FEEDBACK
+  PLAN_UPDATE
+}
+
+enum NotificationType {
+  PLAN_ASSIGNED
+  NUTRITION_ASSIGNED
+  NOTE_ADDED
+  PHOTO_REMINDER
+  WEIGHT_REMINDER
+  CHECKIN_REVIEWED
+  GENERIC
+}
+
+// =============================================================================
+// Identity
+// =============================================================================
+
+model User {
+  id           String   @id @default(cuid())
+  phone        String   @unique
+  passwordHash String
+  role         Role     @default(MEMBER)
+  fullName     String
+  profileImage String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberProfile  MemberProfile?
+  refreshTokens  RefreshToken[]
+
+  // As member
+  trainingPlans  TrainingPlan[]   @relation("MemberPlans")
+  nutritionPlans NutritionPlan[]  @relation("MemberNutritionPlans")
+  workoutLogs    WorkoutLog[]
+  nutritionLogs  NutritionLog[]
+  weightLogs     WeightLog[]
+  measurements   BodyMeasurement[]
+  photos         ProgressPhoto[]
+  checkIns       CheckIn[]
+  memberNotes    MemberNote[]
+  notesAbout     AdminNote[]      @relation("NotesAboutMember")
+  subscription   Subscription?
+
+  // As admin
+  createdMembersAuthored AdminNote[]      @relation("NotesAuthor")
+  exerciseLibraryItems   ExerciseLibrary[]
+  foodLibraryItems       FoodLibrary[]
+  notifications          Notification[]
+  authoredPlans          TrainingPlan[]   @relation("PlansAuthor")
+  authoredNutritionPlans NutritionPlan[]  @relation("NutritionPlansAuthor")
+
+  @@index([role])
+  @@index([isActive])
+}
+
+model MemberProfile {
+  id               String        @id @default(cuid())
+  userId           String        @unique
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  age              Int?
+  gender           Gender?
+  heightCm         Float?
+  currentWeightKg  Float?
+  goal             Goal?
+  fitnessLevel     FitnessLevel?
+  medicalNotes     String?
+
+  status           MemberStatus  @default(ACTIVE)
+  startDate        DateTime?
+  expiryDate       DateTime?
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([status])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// =============================================================================
+// Subscriptions / Pricing
+// =============================================================================
+
+model PricingPlan {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  priceCents   Int
+  currency     String   @default("USD")
+  durationDays Int      // 30, 60, 90 ...
+  features     Json     @default("[]")
+  ctaLabel     String   @default("Choose plan")
+  ctaLink      String?
+  isPopular    Boolean  @default(false)
+  isVisible    Boolean  @default(true)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([isVisible, order])
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  memberId  String   @unique
+  member    User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  planId    String?
+  plan      PricingPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  status    MemberStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =============================================================================
+// Exercise / Food libraries (reusable, admin-owned)
+// =============================================================================
+
+model ExerciseLibrary {
+  id                 String  @id @default(cuid())
+  name               String
+  muscleGroup        String
+  videoUrl           String?
+  imageUrl           String?
+  instructions       String?
+  defaultSets        Int?    @default(3)
+  defaultRepsMin     Int?    @default(8)
+  defaultRepsMax     Int?    @default(12)
+  defaultRestSeconds Int?    @default(90)
+  createdById        String?
+  createdBy          User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  exercises Exercise[]
+
+  @@index([muscleGroup])
+  @@index([name])
+}
+
+model FoodLibrary {
+  id          String   @id @default(cuid())
+  name        String
+  servingSize Float    @default(100)
+  unit        String   @default("g")
+  calories    Float    @default(0)
+  proteinG    Float    @default(0)
+  carbsG      Float    @default(0)
+  fatsG       Float    @default(0)
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  foodItems FoodItem[]
+
+  @@index([name])
+}
+
+// =============================================================================
+// Training
+// =============================================================================
+
+model TrainingPlan {
+  id           String   @id @default(cuid())
+  memberId     String?
+  member       User?    @relation("MemberPlans", fields: [memberId], references: [id], onDelete: Cascade)
+  authorId     String?
+  author       User?    @relation("PlansAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  isTemplate   Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  name         String
+  goal         Goal?
+  startDate    DateTime?
+  endDate      DateTime?
+  daysPerWeek  Int      @default(3)
+  notes        String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  days TrainingDay[]
+
+  @@index([memberId, isActive])
+  @@index([isTemplate])
+}
+
+model TrainingDay {
+  id            String   @id @default(cuid())
+  planId        String
+  plan          TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  dayNumber     Int
+  name          String
+  targetMuscles String[]  @default([])
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  exercises Exercise[]
+  workoutLogs WorkoutLog[]
+
+  @@index([planId, dayNumber])
+}
+
+model Exercise {
+  id           String   @id @default(cuid())
+  dayId        String
+  day          TrainingDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  libraryId    String?
+  library      ExerciseLibrary? @relation(fields: [libraryId], references: [id], onDelete: SetNull)
+
+  name         String
+  muscleGroup  String?
+  videoUrl     String?
+  imageUrl     String?
+  instructions String?
+  sets         Int      @default(3)
+  repsMin      Int      @default(8)
+  repsMax      Int      @default(12)
+  restSeconds  Int      @default(90)
+  tempo        String?  // e.g. "3-1-1"
+  rpe          Float?
+  notes        String?
+  order        Int      @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  setLogs WorkoutSetLog[]
+
+  @@index([dayId, order])
+}
+
+model WorkoutLog {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  dayId       String?
+  day         TrainingDay? @relation(fields: [dayId], references: [id], onDelete: SetNull)
+  date        DateTime @default(now())
+  durationSec Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  setLogs WorkoutSetLog[]
+
+  @@index([memberId, date])
+}
+
+model WorkoutSetLog {
+  id              String   @id @default(cuid())
+  logId           String
+  log             WorkoutLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  exerciseId      String?
+  exercise        Exercise?  @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
+  setNumber       Int
+  weightKg        Float?
+  reps            Int?
+  completed       Boolean  @default(true)
+  restSecondsUsed Int?
+  rpe             Float?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([logId])
+  @@index([exerciseId])
+}
+
+// =============================================================================
+// Nutrition
+// =============================================================================
+
+model NutritionPlan {
+  id           String   @id @default(cuid())
+  memberId     String?
+  member       User?    @relation("MemberNutritionPlans", fields: [memberId], references: [id], onDelete: Cascade)
+  authorId     String?
+  author       User?    @relation("NutritionPlansAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  isTemplate   Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  name         String
+  goal         Goal?
+  calories     Int      @default(2200)
+  proteinG     Int      @default(150)
+  carbsG       Int      @default(220)
+  fatsG        Int      @default(70)
+  waterMl      Int      @default(3000)
+  mealsPerDay  Int      @default(4)
+  notes        String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  meals Meal[]
+
+  @@index([memberId, isActive])
+  @@index([isTemplate])
+}
+
+model Meal {
+  id        String   @id @default(cuid())
+  planId    String
+  plan      NutritionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  order     Int      @default(0)
+  name      String
+  time      String?  // "08:00"
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  foods FoodItem[]
+  logs  NutritionLog[]
+
+  @@index([planId, order])
+}
+
+model FoodItem {
+  id           String   @id @default(cuid())
+  mealId       String
+  meal         Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  libraryId    String?
+  library      FoodLibrary? @relation(fields: [libraryId], references: [id], onDelete: SetNull)
+  name         String
+  quantity     Float    @default(100)
+  unit         String   @default("g")
+  calories     Float    @default(0)
+  proteinG     Float    @default(0)
+  carbsG       Float    @default(0)
+  fatsG        Float    @default(0)
+  alternatives Json     @default("[]")
+  order        Int      @default(0)
+
+  @@index([mealId, order])
+}
+
+model NutritionLog {
+  id              String   @id @default(cuid())
+  memberId        String
+  member          User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  mealId          String?
+  meal            Meal?    @relation(fields: [mealId], references: [id], onDelete: SetNull)
+  date            DateTime @default(now())
+  status          MealStatus @default(PENDING)
+  percentFollowed Int?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([memberId, date])
+}
+
+// =============================================================================
+// Progress tracking
+// =============================================================================
+
+model WeightLog {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  date      DateTime
+  weightKg  Float
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@unique([memberId, date])
+  @@index([memberId, date])
+}
+
+model BodyMeasurement {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  date        DateTime
+  chest       Float?
+  waist       Float?
+  hip         Float?
+  thigh       Float?
+  calf        Float?
+  biceps      Float?
+  forearm     Float?
+  shoulder    Float?
+  neck        Float?
+  bodyFatPct  Float?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([memberId, date])
+}
+
+model ProgressPhoto {
+  id        String    @id @default(cuid())
+  memberId  String
+  member    User      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  date      DateTime
+  type      PhotoType
+  url       String
+  notes     String?
+  createdAt DateTime  @default(now())
+
+  @@index([memberId, date])
+}
+
+model CheckIn {
+  id              String   @id @default(cuid())
+  memberId        String
+  member          User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  weekStart       DateTime
+  weightKg        Float?
+  energy          Int?     // 1..5
+  sleep           Int?
+  hunger          Int?
+  stress          Int?
+  workoutScore    Int?     // 1..5
+  nutritionScore  Int?
+  mood            Int?
+  notes           String?
+  issues          String?
+  adminFeedback   String?
+  reviewedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([memberId, weekStart])
+  @@index([memberId])
+}
+
+// =============================================================================
+// Notes / Notifications
+// =============================================================================
+
+model AdminNote {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    User     @relation("NotesAboutMember", fields: [memberId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?    @relation("NotesAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  body      String
+  isPrivate Boolean  @default(false)
+  kind      NoteKind @default(GENERAL)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([memberId, createdAt])
+}
+
+model MemberNote {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([memberId, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// =============================================================================
+// Public-facing CMS
+// =============================================================================
+
+model SiteSettings {
+  id              Int      @id @default(1)
+  brandName       String   @default("Coach Pro")
+  tagline         String   @default("Your transformation partner")
+  logoUrl         String?
+  primaryColor    String   @default("#22e36a")
+  secondaryColor  String   @default("#05070b")
+  fontFamily      String   @default("Inter")
+  heroFontScale   Float    @default(1.0)
+  isDark          Boolean  @default(true)
+
+  whatsappNumber  String?
+  email           String?
+  phone           String?
+  address         String?
+  instagram       String?
+  tiktok          String?
+  youtube         String?
+  twitter         String?
+  facebook        String?
+
+  metaTitle       String?
+  metaDescription String?
+
+  updatedAt       DateTime @updatedAt
+}
+
+model LandingPageSection {
+  id        String   @id @default(cuid())
+  key       String   @unique // "hero" | "about" | "how-it-works" | "features" | "contact" ...
+  order     Int      @default(0)
+  isVisible Boolean  @default(true)
+  title     String?
+  subtitle  String?
+  content   Json     @default("{}")
+  image     String?
+  ctaLabel  String?
+  ctaLink   String?
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  order       Int      @default(0)
+  icon        String   @default("dumbbell")
+  title       String
+  description String
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([order])
+}
+
+model Testimonial {
+  id         String   @id @default(cuid())
+  order      Int      @default(0)
+  name       String
+  image      String?
+  rating     Int      @default(5)
+  text       String
+  isVisible  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([order])
+}
+
+model FAQ {
+  id        String   @id @default(cuid())
+  order     Int      @default(0)
+  question  String
+  answer    String
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  message   String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html, body, #root { height: 100%; }
+  body {
+    background-color: theme('colors.ink.950');
+    color: theme('colors.ink.100');
+    font-family: theme('fontFamily.sans');
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: theme('colors.accent.400'); color: #000; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background-color: theme('colors.ink.700');
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: theme('colors.ink.600');
+  }
+}
+
+@layer components {
+  .container-app { @apply mx-auto w-full max-w-7xl px-4 md:px-6; }
+  .surface       { @apply rounded-2xl border border-ink-700/60 bg-ink-900/70 backdrop-blur; }
+  .surface-card  { @apply surface p-5 shadow-card; }
+  .label-faded   { @apply text-xs uppercase tracking-[0.2em] text-ink-200; }
+}
+
+@layer utilities {
+  .display { font-family: theme('fontFamily.display'); letter-spacing: 0.02em; }
+  .gradient-text {
+    background: linear-gradient(135deg, theme('colors.accent.400'), theme('colors.accent.200'));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
