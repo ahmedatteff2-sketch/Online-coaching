@@ -119,75 +119,72 @@ export interface SectionContentMap {
 
 export const SECTION_DEFAULTS: SectionContentMap = {
   hero: {
-    headline_en: "Build the body you actually want.",
-    headline_ar: "ابني الجسم اللي إنت عايزه فعلاً.",
+    headline_en: "I build the training. You bring the work.",
+    headline_ar: "أنا ببني تمرينك. إنت بس التزم.",
     subheadline_en:
-      "Personalized coaching, smart nutrition, and daily accountability — all in one place.",
+      "Coach Ahmed — 1-on-1 online programming for people who are done starting over. Weekly check-ins, direct WhatsApp, and a plan that survives real life.",
     subheadline_ar:
-      "كوتشينج شخصي، تغذية ذكية، ومتابعة يومية — كل ده في مكان واحد.",
-    cta_text_en: "Start your journey",
-    cta_text_ar: "ابدأ رحلتك",
+      "كوتش أحمد — تدريب أونلاين واحد-لواحد لي اللي تعبوا يبتدوا من الصفر. متابعة أسبوعية، واتساب مباشر، وخطة بتعيش في جدولك فعلاً.",
+    cta_text_en: "Apply for coaching",
+    cta_text_ar: "قدّم للكوتشينج",
     background_url: "",
   },
   features: {
     items: [
       {
         icon: "Dumbbell",
-        title_en: "Personalized Workout Plan",
-        title_ar: "خطة تمرين مخصصة",
-        desc_en: "Programs built around your level, schedule, and goals.",
-        desc_ar: "برامج مصممة حسب مستواك وجدولك وأهدافك.",
+        title_en: "Programming around your week",
+        title_ar: "برنامج مبني على أسبوعك إنت",
+        desc_en:
+          "Three, four, or five days. Home or gym. Built for the schedule you actually have — not the one you wish you had.",
+        desc_ar:
+          "تلاتة أيام، أربعة، أو خمسة. بيت أو جيم. مبني على الجدول اللي عندك فعلاً — مش اللي نفسك فيه.",
       },
       {
         icon: "Apple",
-        title_en: "Flexible Nutrition System",
-        title_ar: "نظام تغذية مرن",
-        desc_en: "Hit your macros without giving up the foods you love.",
-        desc_ar: "وصّل أهدافك من غير ما تتنازل عن الأكل اللي بتحبه.",
-      },
-      {
-        icon: "Activity",
-        title_en: "Daily Check-in & Tracking",
-        title_ar: "متابعة يومية",
-        desc_en: "Stay accountable with quick nightly check-ins.",
-        desc_ar: "اتابع نفسك يومياً بفورم سريع كل ليلة.",
+        title_en: "Nutrition you can hold for a year",
+        title_ar: "تغذية تقدر تكمل عليها سنة",
+        desc_en:
+          "Macros, not meal plans you'll quit by week two. We pick numbers, you pick the food.",
+        desc_ar:
+          "ماكروس، مش وجبات جاهزة هتتفرع منها بعد أسبوعين. أنا بحدد الأرقام، إنت بتختار الأكل.",
       },
       {
         icon: "MessageCircle",
-        title_en: "Direct Coach Access",
-        title_ar: "تواصل مباشر مع الكوتش",
-        desc_en: "Real feedback from a real coach — not a chatbot.",
-        desc_ar: "فيدباك حقيقي من كوتش حقيقي — مش بوت.",
-      },
-      {
-        icon: "Camera",
-        title_en: "Visual & Metric Progress",
-        title_ar: "تتبع التقدم بالصور والأرقام",
+        title_en: "Weekly check-in. Direct WhatsApp.",
+        title_ar: "متابعة أسبوعية. واتساب مباشر.",
         desc_en:
-          "Track weight, measurements, and progress photos in one place.",
-        desc_ar: "تابع وزنك ومقاساتك وصور التقدم في مكان واحد.",
+          "You send a check-in once a week. I respond within 24 hours, with adjustments — not emojis.",
+        desc_ar:
+          "بتبعت تشيك-إن مرة في الأسبوع. برد في أقل من 24 ساعة، بتعديلات حقيقية — مش إيموجي.",
       },
     ],
   },
   how_it_works: {
     steps: [
       {
-        title_en: "Join",
-        title_ar: "سجّل",
-        desc_en: "Sign up and share your goals.",
-        desc_ar: "سجّل وقولنا هدفك.",
+        title_en: "Apply",
+        title_ar: "قدّم",
+        desc_en:
+          "Five-minute form. Goals, schedule, training history, the food you actually eat. No marketing fluff.",
+        desc_ar:
+          "فورم 5 دقايق. الهدف، الجدول، تاريخك في الجيم، والأكل اللي بتاكله فعلاً. مفيش كلام فاضي.",
       },
       {
-        title_en: "Get Your Plan",
-        title_ar: "استلم برنامجك",
-        desc_en: "Receive a custom workout + nutrition plan.",
-        desc_ar: "هتستلم برنامج تمرين وتغذية مخصص ليك.",
+        title_en: "Get your plan",
+        title_ar: "استلم خطتك",
+        desc_en:
+          "Training split + macros + a short voice-note explaining why. Inside 48 hours of payment.",
+        desc_ar:
+          "برنامج تمرين + ماكروس + فيديو صوت قصير بشرح ليه بالشكل ده. في أقل من 48 ساعة من الدفع.",
       },
       {
-        title_en: "Track & Transform",
-        title_ar: "تابع واتغير",
-        desc_en: "Log workouts and check in daily — we adjust as you go.",
-        desc_ar: "سجّل تمرينك وعمل تشيك-إن يومي — احنا بنعدل معاك.",
+        title_en: "Check in weekly",
+        title_ar: "تابع أسبوعياً",
+        desc_en:
+          "Weight, photos, a few honest sentences. I review and adjust the plan — calories, volume, deloads.",
+        desc_ar:
+          "وزن، صور، وكلمتين صريحين. براجع وبعدل الخطة — سعرات، حجم تمرين، ديلود.",
       },
     ],
   },
@@ -198,18 +195,19 @@ export const SECTION_DEFAULTS: SectionContentMap = {
     tiers: [],
   },
   cta_footer: {
-    headline_en: "Ready to start?",
-    headline_ar: "جاهز تبدأ؟",
+    headline_en: "Last thing.",
+    headline_ar: "حاجة أخيرة.",
     subheadline_en:
-      "Stop guessing. Get a plan that fits your life and a coach who actually pays attention.",
-    subheadline_ar: "بطّل تخمين. احصل على خطة تناسب حياتك وكوتش بيتابعك فعلاً.",
-    cta_text_en: "Sign up now",
-    cta_text_ar: "سجّل دلوقتي",
+      "I take a small number of clients at a time so I can actually pay attention to each one. If you're done starting over, apply now.",
+    subheadline_ar:
+      "بشتغل مع عدد صغير في الوقت عشان أقدر أتابع كل واحد صح. لو تعبت تبتدي من الصفر مرة تانية، قدّم دلوقتي.",
+    cta_text_en: "Apply for coaching",
+    cta_text_ar: "قدّم للكوتشينج",
   },
   theme: {
-    primary: "#a3e635",
-    accent: "#f97316",
-    background: "#0f0f0f",
+    primary: "#DC2626",
+    accent: "#FACC15",
+    background: "#0A0A0A",
   },
 };
 
